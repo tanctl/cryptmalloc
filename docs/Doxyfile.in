@@ -1,0 +1,40 @@
+# doxygen config for cryptmalloc
+PROJECT_NAME           = "CryptMalloc"
+PROJECT_NUMBER         = @PROJECT_VERSION@
+PROJECT_BRIEF          = "Encrypted memory allocator with openFHE integration"
+
+OUTPUT_DIRECTORY       = @CMAKE_CURRENT_BINARY_DIR@/docs
+STRIP_FROM_PATH        = @CMAKE_CURRENT_SOURCE_DIR@
+STRIP_FROM_INC_PATH    = @CMAKE_CURRENT_SOURCE_DIR@/include
+
+# extract everything for now
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+JAVADOC_AUTOBRIEF      = YES
+
+# input sources
+INPUT                  = @CMAKE_CURRENT_SOURCE_DIR@/include \
+                         @CMAKE_CURRENT_SOURCE_DIR@/src \
+                         @CMAKE_CURRENT_SOURCE_DIR@/README.md
+
+RECURSIVE              = YES
+EXCLUDE_PATTERNS       = */build/* */.*
+USE_MDFILE_AS_MAINPAGE = README.md
+
+# output formats - html only for now
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_RTF           = NO
+GENERATE_XML           = NO
+
+# enable source browser
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+
+# basic preprocessing
+ENABLE_PREPROCESSING   = YES
+INCLUDE_PATH           = @CMAKE_CURRENT_SOURCE_DIR@/include
+
+# diagrams without graphviz for now
+CLASS_DIAGRAMS         = YES
+HAVE_DOT               = NO
