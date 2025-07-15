@@ -1,0 +1,76 @@
+PROJECT_NAME           = "CryptMalloc"
+PROJECT_NUMBER         = @PROJECT_VERSION@
+PROJECT_BRIEF          = "Encrypted memory allocator using OpenFHE"
+
+OUTPUT_DIRECTORY       = @CMAKE_CURRENT_BINARY_DIR@
+CREATE_SUBDIRS         = NO
+
+INPUT                  = @CMAKE_SOURCE_DIR@/include \
+                         @CMAKE_SOURCE_DIR@/src \
+                         @CMAKE_SOURCE_DIR@/examples
+
+INPUT_ENCODING         = UTF-8
+FILE_PATTERNS          = *.hpp \
+                         *.cpp \
+                         *.h \
+                         *.c \
+                         *.md
+
+RECURSIVE              = YES
+EXCLUDE_PATTERNS       = */build/* \
+                         */cmake-build-*/* \
+                         */.git/*
+
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+HTML_COLORSTYLE_HUE    = 220
+HTML_COLORSTYLE_SAT    = 100
+HTML_COLORSTYLE_GAMMA  = 80
+
+GENERATE_LATEX         = NO
+
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = NO
+SEARCH_INCLUDES        = YES
+INCLUDE_PATH           = @CMAKE_SOURCE_DIR@/include
+
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+
+HAVE_DOT               = @DOXYGEN_DOT_FOUND@
+DOT_NUM_THREADS        = 0
+DOT_FONTNAME           = Helvetica
+DOT_FONTSIZE           = 10
+
+CLASS_DIAGRAMS         = YES
+COLLABORATION_GRAPH    = YES
+GROUP_GRAPHS           = YES
+UML_LOOK               = NO
+TEMPLATE_RELATIONS     = NO
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+GRAPHICAL_HIERARCHY    = YES
+DIRECTORY_GRAPH        = YES
+
+PREDEFINED             = CRYPTMALLOC_DOXYGEN_BUILD
+
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = YES
+REFERENCED_BY_RELATION = NO
+REFERENCES_RELATION    = NO
+
+SEARCHENGINE           = YES
