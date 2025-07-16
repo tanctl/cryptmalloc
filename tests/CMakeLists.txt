@@ -3,6 +3,7 @@ add_executable(test_main
     test_openfhe_basic.cpp
     test_bfv_context.cpp
     test_bfv_operations.cpp
+    test_bfv_comparisons.cpp
 )
 
 target_link_libraries(test_main PRIVATE
@@ -17,6 +18,12 @@ target_compile_definitions(test_main PRIVATE
 add_test(NAME cryptmalloc_tests COMMAND test_main)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_options(test_main PRIVATE -fsanitize=address -fsanitize=memory)
-    target_link_options(test_main PRIVATE -fsanitize=address -fsanitize=memory)
+    if(ENABLE_ASAN)
+        target_compile_options(test_main PRIVATE -fsanitize=address)
+        target_link_options(test_main PRIVATE -fsanitize=address)
+    endif()
+    if(ENABLE_MSAN)
+        target_compile_options(test_main PRIVATE -fsanitize=memory)
+        target_link_options(test_main PRIVATE -fsanitize=memory)
+    endif()
 endif()

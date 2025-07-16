@@ -3,6 +3,7 @@ add_executable(benchmarks
     crypto_benchmarks.cpp
     allocator_benchmarks.cpp
     bfv_benchmarks.cpp
+    comparison_benchmarks.cpp
 )
 
 target_link_libraries(benchmarks PRIVATE

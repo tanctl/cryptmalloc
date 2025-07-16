@@ -86,6 +86,7 @@ set(CRYPTMALLOC_SOURCES
     src/openfhe_context.cpp
     src/bfv_context.cpp
     src/bfv_operations.cpp
+    src/bfv_comparisons.cpp
 )
 
 set(CRYPTMALLOC_HEADERS
@@ -94,6 +95,7 @@ set(CRYPTMALLOC_HEADERS
     include/cryptmalloc/allocator.hpp
     include/cryptmalloc/bfv_context.hpp
     include/cryptmalloc/bfv_operations.hpp
+    include/cryptmalloc/bfv_comparisons.hpp
 )
 
 add_library(cryptmalloc ${CRYPTMALLOC_SOURCES} ${CRYPTMALLOC_HEADERS})
