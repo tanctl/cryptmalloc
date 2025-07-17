@@ -1,5 +1,8 @@
 use cryptmalloc::allocator::core::EncryptedAllocator;
-use cryptmalloc::types::encrypted::{EncryptedBool, EncryptedUint8};
+use cryptmalloc::types::encrypted::{
+    EncryptedBool, EncryptedUint16, EncryptedUint32, EncryptedUint8,
+};
+use cryptmalloc::types::{max_option_list, min_array_u8, select_integer};
 use cryptmalloc::TfheContext;
 
 #[test]
@@ -70,13 +73,35 @@ fn allocator_trait_signature_compiles() {
 
 #[test]
 fn encrypted_integer_arithmetic_behaviour() {
-    use cryptmalloc::types::encrypted::{EncryptedUint16, EncryptedUint32, EncryptedUint8};
-
     let context = TfheContext::balanced().expect("context initialization");
 
     // u8 edge cases
     let a8 = EncryptedUint8::encrypt(200, &context).expect("encrypt a8");
     let b8 = EncryptedUint8::encrypt(100, &context).expect("encrypt b8");
+    // comparisons rely on tfhe circuits for constant-time behaviour
+    let cmp_a = EncryptedUint8::encrypt(32, &context).expect("encrypt cmp a");
+    let cmp_b = EncryptedUint8::encrypt(64, &context).expect("encrypt cmp b");
+    let eq_result = cmp_a.eq_cipher(&cmp_b).expect("eq cipher");
+    assert!(!eq_result.decrypt().expect("decrypt eq"));
+    let lt_result = cmp_a.lt_cipher(&cmp_b).expect("lt cipher");
+    assert!(lt_result.decrypt().expect("decrypt lt"));
+    let gt_result = cmp_b.gt_cipher(&cmp_a).expect("gt cipher");
+    assert!(gt_result.decrypt().expect("decrypt gt"));
+    let min_cipher = cmp_a.min_cipher(&cmp_b).expect("min cipher");
+    assert_eq!(min_cipher.decrypt().expect("decrypt min"), 32);
+    let max_cipher = cmp_a.max_cipher(&cmp_b).expect("max cipher");
+    assert_eq!(max_cipher.decrypt().expect("decrypt max"), 64);
+    let picked = select_integer(&lt_result, &cmp_a, &cmp_b).expect("select integer");
+    assert_eq!(picked.decrypt().expect("decrypt pick"), 32);
+    let options = [Some(cmp_a.clone()), None, Some(cmp_b.clone())];
+    let best = max_option_list(&options).expect("max option list");
+    assert!(best.is_some());
+    assert_eq!(best.unwrap().decrypt().expect("decrypt best"), 64);
+
+    let third = EncryptedUint8::encrypt(50, &context).expect("encrypt third");
+    let chain_min = min_array_u8::<3>([&cmp_a, &cmp_b, &third]).expect("min array");
+    assert_eq!(chain_min.decrypt().expect("decrypt min array"), 32);
+
     let wrap_add = a8
         .wrapping_add(&b8)
         .expect("wrapping add")
@@ -92,13 +117,13 @@ fn encrypted_integer_arithmetic_behaviour() {
     assert_eq!(sat_add, u8::MAX);
 
     let c8 = EncryptedUint8::encrypt(5, &context).expect("encrypt c8");
-    let d8 = EncryptedUint8::encrypt(5, &context).expect("encrypt d8");
+    let d8 = EncryptedUint8::encrypt(3, &context).expect("encrypt d8");
     let checked_sub = c8
         .checked_sub(&d8)
         .expect("checked sub")
         .decrypt()
         .expect("decrypt");
-    assert_eq!(checked_sub, 0);
+    assert_eq!(checked_sub, 2);
     assert!(d8.checked_sub(&c8).is_err());
 
     let mul_wrap = c8

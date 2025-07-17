@@ -1,5 +1,6 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
+use cryptmalloc::types::comparison::select_integer;
 use cryptmalloc::types::encrypted::EncryptedUint8;
 use cryptmalloc::{SecurityLevel, TfheContext};
 
@@ -52,9 +53,33 @@ fn addition_comparison_benchmarks(c: &mut Criterion) {
     group.finish();
 }
 
+fn comparison_benchmarks(c: &mut Criterion) {
+    let context = TfheContext::with_security_level(SecurityLevel::Balanced).expect("context");
+    let lhs = EncryptedUint8::encrypt(42, &context).expect("encrypt lhs");
+    let rhs = EncryptedUint8::encrypt(64, &context).expect("encrypt rhs");
+
+    c.bench_function("encrypted_lt_u8", |b| {
+        b.iter(|| {
+            let result = lhs.lt_cipher(&rhs).expect("lt");
+            criterion::black_box(result)
+        });
+    });
+
+    c.bench_function("encrypted_select_u8", |b| {
+        b.iter(|| {
+            let result = lhs
+                .lt_cipher(&rhs)
+                .and_then(|cond| select_integer(&cond, &lhs, &rhs))
+                .expect("select");
+            criterion::black_box(result)
+        });
+    });
+}
+
 criterion_group!(
     crypto,
     key_generation_benchmarks,
-    addition_comparison_benchmarks
+    addition_comparison_benchmarks,
+    comparison_benchmarks
 );
 criterion_main!(crypto);
