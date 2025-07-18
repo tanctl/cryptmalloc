@@ -1,10 +1,19 @@
 use std::fmt;
 
-use tfhe::{FheUint16, FheUint32, FheUint8};
+use serde::{Deserialize, Serialize};
+use tfhe::{FheUint16, FheUint32, FheUint64, FheUint8};
 
 use crate::crypto::error::CryptoError;
 use crate::crypto::noise::NoiseState;
 use crate::crypto::tfhe_context::{TfheContext, TfheContextError};
+
+fn default_context() -> TfheContext {
+    TfheContext::balanced().expect("context initialization")
+}
+
+fn zero_noise() -> NoiseState {
+    NoiseState::zero()
+}
 
 macro_rules! encrypted_uint {
     (
@@ -14,10 +23,12 @@ macro_rules! encrypted_uint {
         $encrypt_method:ident,
         $decrypt_method:ident
     ) => {
-        #[derive(Clone)]
+        #[derive(Clone, Serialize, Deserialize)]
         pub struct $wrapper {
             inner: $cipher,
+            #[serde(skip, default = "default_context")]
             context: TfheContext,
+            #[serde(skip, default = "zero_noise")]
             noise: NoiseState,
         }
 
@@ -49,6 +60,7 @@ macro_rules! encrypted_uint {
                 &self.noise
             }
 
+            #[allow(dead_code)]
             pub(crate) fn set_noise(&mut self, noise: NoiseState) {
                 self.noise = noise;
             }
@@ -136,3 +148,5 @@ macro_rules! encrypted_uint {
 encrypted_uint!(EncryptedUint8, FheUint8, u8, encrypt_u8, decrypt_u8);
 encrypted_uint!(EncryptedUint16, FheUint16, u16, encrypt_u16, decrypt_u16);
 encrypted_uint!(EncryptedUint32, FheUint32, u32, encrypt_u32, decrypt_u32);
+
+encrypted_uint!(EncryptedUint64, FheUint64, u64, encrypt_u64, decrypt_u64);

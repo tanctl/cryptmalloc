@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use tfhe::FheBool;
@@ -6,10 +7,20 @@ use crate::crypto::error::CryptoError;
 use crate::crypto::noise::NoiseState;
 use crate::crypto::tfhe_context::{TfheContext, TfheContextError};
 
-#[derive(Clone)]
+fn default_context() -> TfheContext {
+    TfheContext::balanced().expect("context initialization")
+}
+
+fn zero_noise() -> NoiseState {
+    NoiseState::zero()
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct EncryptedBool {
     inner: FheBool,
+    #[serde(skip, default = "default_context")]
     context: TfheContext,
+    #[serde(skip, default = "zero_noise")]
     noise: NoiseState,
 }
 

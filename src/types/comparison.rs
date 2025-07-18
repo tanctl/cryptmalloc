@@ -1,10 +1,12 @@
 use std::cmp::Ordering;
 use tfhe::prelude::{FheEq, FheOrd, IfThenElse};
-use tfhe::{FheBool, FheUint16, FheUint32, FheUint8};
+use tfhe::{FheBool, FheUint16, FheUint32, FheUint64, FheUint8};
 
 use crate::crypto::error::CryptoError;
 use crate::crypto::noise::NoiseState;
-use crate::types::encrypted::{EncryptedBool, EncryptedUint16, EncryptedUint32, EncryptedUint8};
+use crate::types::encrypted::{
+    EncryptedBool, EncryptedUint16, EncryptedUint32, EncryptedUint64, EncryptedUint8,
+};
 
 const COST_COMPARISON: usize = 6;
 const COST_SELECT_BRANCH: usize = 3;
@@ -111,6 +113,7 @@ macro_rules! comparison_impls {
 comparison_impls!(EncryptedUint8, le, lt, gt, ge, eq);
 comparison_impls!(EncryptedUint16, le, lt, gt, ge, eq);
 comparison_impls!(EncryptedUint32, le, lt, gt, ge, eq);
+comparison_impls!(EncryptedUint64, le, lt, gt, ge, eq);
 
 fn merge_condition_noise(
     condition: &EncryptedBool,
@@ -236,6 +239,7 @@ macro_rules! selectable_impl {
 selectable_impl!(EncryptedUint8, FheUint8);
 selectable_impl!(EncryptedUint16, FheUint16);
 selectable_impl!(EncryptedUint32, FheUint32);
+selectable_impl!(EncryptedUint64, FheUint64);
 
 pub fn min_array_u8<const N: usize>(
     inputs: [&EncryptedUint8; N],

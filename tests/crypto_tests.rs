@@ -2,7 +2,10 @@ use cryptmalloc::allocator::core::EncryptedAllocator;
 use cryptmalloc::types::encrypted::{
     EncryptedBool, EncryptedUint16, EncryptedUint32, EncryptedUint8,
 };
-use cryptmalloc::types::{max_option_list, min_array_u8, select_integer};
+use cryptmalloc::types::{
+    align_request, choose_smallest, max_option_list, min_array_u8, min_size_array, select_integer,
+    EncryptedAddress, EncryptedPointer, EncryptedSize,
+};
 use cryptmalloc::TfheContext;
 
 #[test]
@@ -162,4 +165,67 @@ fn encrypted_integer_arithmetic_behaviour() {
     let a32 = EncryptedUint32::encrypt(65_536, &context).expect("encrypt a32");
     let b32 = EncryptedUint32::encrypt(65_536, &context).expect("encrypt b32");
     assert!(a32.checked_mul(&b32).is_err());
+}
+
+#[test]
+fn encrypted_size_alignment_and_selection() {
+    let context = TfheContext::balanced().expect("context initialization");
+
+    let eight = EncryptedSize::encrypt(8, &context).expect("encrypt eight");
+    let sixteen = EncryptedSize::encrypt(16, &context).expect("encrypt sixteen");
+    let twenty_four = eight.checked_add(&sixteen).expect("checked add");
+
+    let aligned = align_request(&twenty_four, 8).expect("align request");
+    assert_eq!(aligned.decrypt().expect("decrypt aligned"), 24);
+
+    let down = twenty_four.align_down_plain(8).expect("align down");
+    assert_eq!(down.decrypt().expect("decrypt down"), 24);
+
+    let min_pair = min_size_array::<2>([&twenty_four, &sixteen]).expect("min encrypted size array");
+    assert_eq!(min_pair.decrypt().expect("decrypt min pair"), 16);
+
+    let chosen = choose_smallest(&[twenty_four.clone(), sixteen.clone()]).expect("choose smallest");
+    assert_eq!(chosen.decrypt().expect("decrypt chosen"), 16);
+}
+
+#[test]
+fn encrypted_pointer_selection_and_guard() {
+    let context = TfheContext::balanced().expect("context initialization");
+
+    let address_a = EncryptedAddress::encrypt(0x1000, &context).expect("encrypt address a");
+    let address_b = EncryptedAddress::encrypt(0x2000, &context).expect("encrypt address b");
+    let span = EncryptedSize::encrypt(64, &context).expect("encrypt span");
+
+    let valid_flag = EncryptedBool::encrypt(true, &context).expect("encrypt valid");
+    let invalid_flag = EncryptedBool::encrypt(false, &context).expect("encrypt invalid");
+
+    let pointer_a = EncryptedPointer::<u8>::new(address_a, Some(span.clone()), valid_flag.clone())
+        .expect("construct pointer a");
+    let pointer_b = EncryptedPointer::<u8>::new(address_b, None, invalid_flag.clone())
+        .expect("construct pointer b");
+
+    let condition = EncryptedBool::encrypt(true, &context).expect("encrypt condition");
+    let selected =
+        EncryptedPointer::select(&condition, &pointer_a, &pointer_b).expect("select pointer");
+    assert_eq!(
+        selected
+            .address()
+            .decrypt()
+            .expect("decrypt selected address"),
+        0x1000
+    );
+    assert!(selected.valid().decrypt().expect("decrypt selected valid"));
+
+    let guard_flag = EncryptedBool::encrypt(false, &context).expect("encrypt guard");
+    let guarded = pointer_a.guard(&guard_flag).expect("guard pointer");
+    assert!(!guarded.valid().decrypt().expect("decrypt guarded valid"));
+
+    let aligned = pointer_b.align_to(0x100).expect("align pointer");
+    assert_eq!(
+        aligned
+            .address()
+            .decrypt()
+            .expect("decrypt aligned address"),
+        0x2000
+    );
 }

@@ -2,7 +2,7 @@ use std::ops::{Add, Mul, Sub};
 
 use tfhe::{FheBool, FheUint16, FheUint32, FheUint8};
 
-use crate::crypto::error::CryptoError;
+use crate::crypto::error::{CryptoError, OverflowError};
 use crate::crypto::noise::NoiseState;
 use crate::types::encrypted::{EncryptedBool, EncryptedUint16, EncryptedUint32, EncryptedUint8};
 
@@ -39,9 +39,7 @@ macro_rules! impl_integer_ops {
                 let max: u128 = Self::max_value().into();
 
                 if lhs_clear.saturating_add(rhs_clear) > max {
-                    return Err(CryptoError::Overflow {
-                        operation: "checked_add",
-                    });
+                    return Err(OverflowError::new("checked_add").into());
                 }
 
                 self.wrapping_add(rhs)
@@ -72,9 +70,7 @@ macro_rules! impl_integer_ops {
                 let rhs_clear: u128 = rhs.decrypt().map_err(CryptoError::from)?.into();
 
                 if lhs_clear < rhs_clear {
-                    return Err(CryptoError::Overflow {
-                        operation: "checked_sub",
-                    });
+                    return Err(OverflowError::new("checked_sub").into());
                 }
 
                 self.wrapping_sub(rhs)
@@ -90,9 +86,7 @@ macro_rules! impl_integer_ops {
                 let max: u128 = Self::max_value().into();
 
                 if lhs_clear.saturating_mul(rhs_clear) > max {
-                    return Err(CryptoError::Overflow {
-                        operation: "checked_mul",
-                    });
+                    return Err(OverflowError::new("checked_mul").into());
                 }
 
                 self.wrapping_mul(rhs)

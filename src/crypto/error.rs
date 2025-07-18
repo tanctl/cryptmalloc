@@ -1,47 +1,47 @@
-use std::fmt;
+use thiserror::Error;
 
 use crate::crypto::tfhe_context::TfheContextError;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Error, Clone)]
+#[error("overflow during {operation}")]
+pub struct OverflowError {
+    pub operation: &'static str,
+}
+
+impl OverflowError {
+    pub const fn new(operation: &'static str) -> Self {
+        Self { operation }
+    }
+}
+
+#[derive(Debug, Error, Clone)]
+#[error("invalid operation: {reason}")]
+pub struct InvalidOperationError {
+    pub reason: &'static str,
+}
+
+impl InvalidOperationError {
+    pub const fn new(reason: &'static str) -> Self {
+        Self { reason }
+    }
+}
+
+#[derive(Debug, Error, Clone)]
 pub enum CryptoError {
+    #[error("ciphertexts originate from different contexts")]
     ContextMismatch,
+    #[error("noise budget exceeded: consumed {consumed} of {capacity}, requires {required}")]
     NoiseBudgetExceeded {
         consumed: usize,
         capacity: usize,
         required: usize,
     },
-    Overflow {
-        operation: &'static str,
-    },
-    InvalidCiphertext(&'static str),
-    Context(TfheContextError),
-}
-
-impl fmt::Display for CryptoError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::ContextMismatch => write!(f, "ciphertexts originate from different contexts"),
-            Self::NoiseBudgetExceeded {
-                consumed,
-                capacity,
-                required,
-            } => write!(
-                f,
-                "noise budget exceeded: consumed {consumed} of {capacity}, requires {required}"
-            ),
-            Self::Overflow { operation } => {
-                write!(f, "{operation} would overflow the ciphertext modulus")
-            }
-            Self::InvalidCiphertext(msg) => write!(f, "invalid ciphertext: {msg}"),
-            Self::Context(err) => write!(f, "{err}"),
-        }
-    }
-}
-
-impl std::error::Error for CryptoError {}
-
-impl From<TfheContextError> for CryptoError {
-    fn from(value: TfheContextError) -> Self {
-        Self::Context(value)
-    }
+    #[error(transparent)]
+    Overflow(#[from] OverflowError),
+    #[error(transparent)]
+    InvalidOperation(#[from] InvalidOperationError),
+    #[error("serialization failure: {0}")]
+    Serialization(String),
+    #[error(transparent)]
+    Context(#[from] TfheContextError),
 }

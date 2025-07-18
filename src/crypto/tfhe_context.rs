@@ -7,7 +7,7 @@ use tfhe::prelude::{FheDecrypt, FheTryEncrypt};
 use tfhe::shortint::parameters::list_compression::COMP_PARAM_MESSAGE_2_CARRY_2_KS_PBS_TUNIFORM_2M64;
 use tfhe::{
     generate_keys, set_server_key, ClientKey, Config, ConfigBuilder, FheBool, FheUint16, FheUint32,
-    FheUint8, ServerKey,
+    FheUint64, FheUint8, ServerKey,
 };
 use zeroize::Zeroizing;
 
@@ -181,6 +181,17 @@ impl TfheContext {
     }
 
     pub fn decrypt_u32(&self, value: &FheUint32) -> Result<u32, TfheContextError> {
+        let guard = self.read_keys()?;
+        Ok(value.decrypt(guard.client_key.as_ref()))
+    }
+
+    pub fn encrypt_u64(&self, value: u64) -> Result<FheUint64, TfheContextError> {
+        let guard = self.read_keys()?;
+        FheUint64::try_encrypt(value, guard.client_key.as_ref())
+            .map_err(|err| TfheContextError::Encryption(err.to_string()))
+    }
+
+    pub fn decrypt_u64(&self, value: &FheUint64) -> Result<u64, TfheContextError> {
         let guard = self.read_keys()?;
         Ok(value.decrypt(guard.client_key.as_ref()))
     }

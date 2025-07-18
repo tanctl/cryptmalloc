@@ -1,8 +1,9 @@
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use crate::crypto::error::CryptoError;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NoiseState {
     consumed: usize,
     capacity: usize,
@@ -30,6 +31,10 @@ impl NoiseState {
     #[must_use]
     pub fn remaining(&self) -> usize {
         self.capacity.saturating_sub(self.consumed)
+    }
+
+    pub fn zero() -> Self {
+        Self::new(0)
     }
 
     pub fn consume(&mut self, amount: usize) -> Result<(), CryptoError> {
