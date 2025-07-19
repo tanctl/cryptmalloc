@@ -11,6 +11,10 @@ pub mod allocator;
 pub mod crypto;
 pub mod types;
 
+pub use allocator::block::EncryptedMemoryBlock;
+pub use allocator::pool::{
+    BlockHandle, PoolError, PoolStats, VirtualMemoryPool, VirtualMemoryPoolBuilder,
+};
 pub use crypto::error::CryptoError;
 pub use crypto::noise::NoiseState;
 pub use crypto::tfhe_context::{ContextConfig, SecurityLevel, TfheContext, TfheContextError};
