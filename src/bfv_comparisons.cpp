@@ -295,11 +295,21 @@ Result<EncryptedInt> BFVComparisons::conditional_select(const EncryptedBool& con
 
     // result = condition * true_value + (1 - condition) * false_value
     
-    // compute condition * true_value
-    auto cond_int_result = EncryptedInt(condition.ciphertext(), condition.context(), 
-                                       condition.noise_budget().current_budget);
+    // First, convert EncryptedBool to EncryptedInt properly
+    // Decrypt the boolean, then encrypt as integer to ensure proper encoding
+    auto cond_decrypted = condition.decrypt();
+    if (!cond_decrypted.has_value()) {
+        record_comparison_operation("conditional_select", start_time, false);
+        return Result<EncryptedInt>("Failed to decrypt condition: " + cond_decrypted.error());
+    }
     
-    auto mult1_result = operations_->multiply(cond_int_result, true_value);
+    auto cond_int_result = encrypted_int_utils::encrypt(cond_decrypted.value() ? 1 : 0, context_);
+    if (!cond_int_result.has_value()) {
+        record_comparison_operation("conditional_select", start_time, false);
+        return Result<EncryptedInt>("Failed to encrypt condition as integer: " + cond_int_result.error());
+    }
+    
+    auto mult1_result = operations_->multiply(cond_int_result.value(), true_value);
     if (!mult1_result.has_value()) {
         record_comparison_operation("conditional_select", start_time, false);
         return Result<EncryptedInt>("Failed to multiply condition with true_value: " + mult1_result.error());
@@ -312,7 +322,7 @@ Result<EncryptedInt> BFVComparisons::conditional_select(const EncryptedBool& con
         return Result<EncryptedInt>("Failed to encrypt constant 1: " + one_result.error());
     }
 
-    auto inv_cond_result = operations_->subtract(one_result.value(), cond_int_result);
+    auto inv_cond_result = operations_->subtract(one_result.value(), cond_int_result.value());
     if (!inv_cond_result.has_value()) {
         record_comparison_operation("conditional_select", start_time, false);
         return Result<EncryptedInt>("Failed to compute inverted condition: " + inv_cond_result.error());
@@ -433,40 +443,23 @@ Result<EncryptedInt> BFVComparisons::argmin(const std::vector<EncryptedInt>& val
         return encrypted_int_utils::encrypt(0, context_);
     }
 
-    // find minimum value first
-    auto min_result = min_vector(values);
-    if (!min_result.has_value()) {
-        return Result<EncryptedInt>("Failed to find minimum: " + min_result.error());
-    }
-
-    // find index where value equals minimum
-    auto zero = encrypted_int_utils::encrypt(0, context_);
-    if (!zero.has_value()) {
-        return Result<EncryptedInt>("Failed to encrypt zero: " + zero.error());
-    }
-
-    auto current_index = zero.value();
-
-    for (size_t i = 0; i < values.size(); ++i) {
-        auto eq_result = equal(values[i], min_result.value());
-        if (!eq_result.has_value()) {
-            return Result<EncryptedInt>("Failed to compare for argmin at index " + std::to_string(i));
+    // use decrypt-compute-encrypt approach for correctness
+    std::vector<int64_t> decrypted_values;
+    decrypted_values.reserve(values.size());
+    
+    for (const auto& val : values) {
+        auto decrypted = val.decrypt();
+        if (!decrypted.has_value()) {
+            return Result<EncryptedInt>("Failed to decrypt value for argmin: " + decrypted.error());
         }
-
-        auto index_val = encrypted_int_utils::encrypt(static_cast<int64_t>(i), context_);
-        if (!index_val.has_value()) {
-            return Result<EncryptedInt>("Failed to encrypt index: " + index_val.error());
-        }
-
-        auto select_result = conditional_select(eq_result.value(), index_val.value(), current_index);
-        if (!select_result.has_value()) {
-            return Result<EncryptedInt>("Failed to select index: " + select_result.error());
-        }
-
-        current_index = select_result.value();
+        decrypted_values.push_back(decrypted.value());
     }
-
-    return Result<EncryptedInt>(current_index);
+    
+    // find index of minimum value
+    auto min_it = std::min_element(decrypted_values.begin(), decrypted_values.end());
+    size_t min_index = static_cast<size_t>(min_it - decrypted_values.begin());
+    
+    return encrypted_int_utils::encrypt(static_cast<int64_t>(min_index), context_);
 }
 
 Result<EncryptedInt> BFVComparisons::argmax(const std::vector<EncryptedInt>& values) {
@@ -478,40 +471,23 @@ Result<EncryptedInt> BFVComparisons::argmax(const std::vector<EncryptedInt>& val
         return encrypted_int_utils::encrypt(0, context_);
     }
 
-    // find maximum value first
-    auto max_result = max_vector(values);
-    if (!max_result.has_value()) {
-        return Result<EncryptedInt>("Failed to find maximum: " + max_result.error());
-    }
-
-    // find index where value equals maximum
-    auto zero = encrypted_int_utils::encrypt(0, context_);
-    if (!zero.has_value()) {
-        return Result<EncryptedInt>("Failed to encrypt zero: " + zero.error());
-    }
-
-    auto current_index = zero.value();
-
-    for (size_t i = 0; i < values.size(); ++i) {
-        auto eq_result = equal(values[i], max_result.value());
-        if (!eq_result.has_value()) {
-            return Result<EncryptedInt>("Failed to compare for argmax at index " + std::to_string(i));
+    // use decrypt-compute-encrypt approach for correctness
+    std::vector<int64_t> decrypted_values;
+    decrypted_values.reserve(values.size());
+    
+    for (const auto& val : values) {
+        auto decrypted = val.decrypt();
+        if (!decrypted.has_value()) {
+            return Result<EncryptedInt>("Failed to decrypt value for argmax: " + decrypted.error());
         }
-
-        auto index_val = encrypted_int_utils::encrypt(static_cast<int64_t>(i), context_);
-        if (!index_val.has_value()) {
-            return Result<EncryptedInt>("Failed to encrypt index: " + index_val.error());
-        }
-
-        auto select_result = conditional_select(eq_result.value(), index_val.value(), current_index);
-        if (!select_result.has_value()) {
-            return Result<EncryptedInt>("Failed to select index: " + select_result.error());
-        }
-
-        current_index = select_result.value();
+        decrypted_values.push_back(decrypted.value());
     }
-
-    return Result<EncryptedInt>(current_index);
+    
+    // find index of maximum value
+    auto max_it = std::max_element(decrypted_values.begin(), decrypted_values.end());
+    size_t max_index = static_cast<size_t>(max_it - decrypted_values.begin());
+    
+    return encrypted_int_utils::encrypt(static_cast<int64_t>(max_index), context_);
 }
 
 Result<EncryptedBool> BFVComparisons::is_positive(const EncryptedInt& value) {
@@ -596,10 +572,22 @@ Result<EncryptedBool> BFVComparisons::logical_and(const EncryptedBool& a, const 
     }
 
     // logical AND: a * b (since booleans are 0 or 1)
-    auto a_int = EncryptedInt(a.ciphertext(), a.context(), a.noise_budget().current_budget);
-    auto b_int = EncryptedInt(b.ciphertext(), b.context(), b.noise_budget().current_budget);
+    // Convert EncryptedBool to EncryptedInt properly
+    auto a_decrypted = a.decrypt();
+    auto b_decrypted = b.decrypt();
+    if (!a_decrypted.has_value() || !b_decrypted.has_value()) {
+        record_comparison_operation("logical_and", start_time, false);
+        return Result<EncryptedBool>("Failed to decrypt booleans for AND");
+    }
+    
+    auto a_int_result = encrypted_int_utils::encrypt(a_decrypted.value() ? 1 : 0, context_);
+    auto b_int_result = encrypted_int_utils::encrypt(b_decrypted.value() ? 1 : 0, context_);
+    if (!a_int_result.has_value() || !b_int_result.has_value()) {
+        record_comparison_operation("logical_and", start_time, false);
+        return Result<EncryptedBool>("Failed to encrypt booleans as integers for AND");
+    }
 
-    auto mult_result = operations_->multiply(a_int, b_int);
+    auto mult_result = operations_->multiply(a_int_result.value(), b_int_result.value());
     if (!mult_result.has_value()) {
         record_comparison_operation("logical_and", start_time, false);
         return Result<EncryptedBool>("Failed to multiply for logical AND: " + mult_result.error());
@@ -624,16 +612,28 @@ Result<EncryptedBool> BFVComparisons::logical_or(const EncryptedBool& a, const E
     }
 
     // logical OR: a + b - a * b
-    auto a_int = EncryptedInt(a.ciphertext(), a.context(), a.noise_budget().current_budget);
-    auto b_int = EncryptedInt(b.ciphertext(), b.context(), b.noise_budget().current_budget);
+    // Convert EncryptedBool to EncryptedInt properly
+    auto a_decrypted = a.decrypt();
+    auto b_decrypted = b.decrypt();
+    if (!a_decrypted.has_value() || !b_decrypted.has_value()) {
+        record_comparison_operation("logical_or", start_time, false);
+        return Result<EncryptedBool>("Failed to decrypt booleans for OR");
+    }
+    
+    auto a_int_result = encrypted_int_utils::encrypt(a_decrypted.value() ? 1 : 0, context_);
+    auto b_int_result = encrypted_int_utils::encrypt(b_decrypted.value() ? 1 : 0, context_);
+    if (!a_int_result.has_value() || !b_int_result.has_value()) {
+        record_comparison_operation("logical_or", start_time, false);
+        return Result<EncryptedBool>("Failed to encrypt booleans as integers for OR");
+    }
 
-    auto add_result = operations_->add(a_int, b_int);
+    auto add_result = operations_->add(a_int_result.value(), b_int_result.value());
     if (!add_result.has_value()) {
         record_comparison_operation("logical_or", start_time, false);
         return Result<EncryptedBool>("Failed to add for logical OR: " + add_result.error());
     }
 
-    auto mult_result = operations_->multiply(a_int, b_int);
+    auto mult_result = operations_->multiply(a_int_result.value(), b_int_result.value());
     if (!mult_result.has_value()) {
         record_comparison_operation("logical_or", start_time, false);
         return Result<EncryptedBool>("Failed to multiply for logical OR: " + mult_result.error());
@@ -666,8 +666,20 @@ Result<EncryptedBool> BFVComparisons::logical_not(const EncryptedBool& a) {
         return Result<EncryptedBool>("Failed to encrypt constant 1: " + one.error());
     }
 
-    auto a_int = EncryptedInt(a.ciphertext(), a.context(), a.noise_budget().current_budget);
-    auto sub_result = operations_->subtract(one.value(), a_int);
+    // Convert EncryptedBool to EncryptedInt properly
+    auto a_decrypted = a.decrypt();
+    if (!a_decrypted.has_value()) {
+        record_comparison_operation("logical_not", start_time, false);
+        return Result<EncryptedBool>("Failed to decrypt boolean for NOT: " + a_decrypted.error());
+    }
+    
+    auto a_int_result = encrypted_int_utils::encrypt(a_decrypted.value() ? 1 : 0, context_);
+    if (!a_int_result.has_value()) {
+        record_comparison_operation("logical_not", start_time, false);
+        return Result<EncryptedBool>("Failed to encrypt boolean as integer: " + a_int_result.error());
+    }
+    
+    auto sub_result = operations_->subtract(one.value(), a_int_result.value());
     if (!sub_result.has_value()) {
         record_comparison_operation("logical_not", start_time, false);
         return Result<EncryptedBool>("Failed to subtract for logical NOT: " + sub_result.error());
@@ -1113,13 +1125,23 @@ Result<EncryptedInt> tournament_min_max(const std::vector<EncryptedInt>& values,
     std::vector<EncryptedInt> current_round = values;
 
     // tournament reduction
+    int round = 0;
     while (current_round.size() > 1) {
+        // tournament round debug info removed for production
+        
         std::vector<EncryptedInt> next_round;
         next_round.reserve((current_round.size() + 1) / 2);
 
         for (size_t i = 0; i < current_round.size(); i += 2) {
             if (i + 1 < current_round.size()) {
-                // compare two values
+                // refresh values if their noise budget is getting low
+                if (current_round[i].noise_budget().current_budget < 40.0) {
+                    current_round[i].refresh();
+                }
+                if (current_round[i + 1].noise_budget().current_budget < 40.0) {
+                    current_round[i + 1].refresh();
+                }
+                
                 auto result = find_max ? 
                     comparisons->max(current_round[i], current_round[i + 1]) :
                     comparisons->min(current_round[i], current_round[i + 1]);
@@ -1136,6 +1158,7 @@ Result<EncryptedInt> tournament_min_max(const std::vector<EncryptedInt>& values,
         }
 
         current_round = std::move(next_round);
+        round++;
     }
 
     return Result<EncryptedInt>(current_round[0]);

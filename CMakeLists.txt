@@ -87,6 +87,7 @@ set(CRYPTMALLOC_SOURCES
     src/bfv_context.cpp
     src/bfv_operations.cpp
     src/bfv_comparisons.cpp
+    src/encrypted_types.cpp
 )
 
 set(CRYPTMALLOC_HEADERS
@@ -96,6 +97,7 @@ set(CRYPTMALLOC_HEADERS
     include/cryptmalloc/bfv_context.hpp
     include/cryptmalloc/bfv_operations.hpp
     include/cryptmalloc/bfv_comparisons.hpp
+    include/cryptmalloc/encrypted_types.hpp
 )
 
 add_library(cryptmalloc ${CRYPTMALLOC_SOURCES} ${CRYPTMALLOC_HEADERS})

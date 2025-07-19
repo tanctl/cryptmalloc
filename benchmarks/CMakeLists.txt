@@ -4,6 +4,7 @@ add_executable(benchmarks
     allocator_benchmarks.cpp
     bfv_benchmarks.cpp
     comparison_benchmarks.cpp
+    encrypted_types_benchmarks.cpp
 )
 
 target_link_libraries(benchmarks PRIVATE

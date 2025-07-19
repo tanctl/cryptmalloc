@@ -800,7 +800,14 @@ Result<EncryptedInt> BFVOperations::perform_binary_operation(
                                        b.noise_budget().current_budget) - noise_cost;
         result_budget = std::max(0.0, result_budget);
 
-        EncryptedInt result(result_ciphertext.value(), context_, result_budget);
+        // preserve the original initial budget for refresh capability
+        double initial_budget = std::max(a.noise_budget().initial_budget, 
+                                        b.noise_budget().initial_budget);
+        
+        EncryptedInt result(result_ciphertext.value(), context_, initial_budget);
+        
+        // set the current budget to the calculated reduced value
+        result.set_current_budget(result_budget);
         
         return Result<EncryptedInt>(std::move(result));
         
@@ -823,7 +830,11 @@ Result<EncryptedInt> BFVOperations::perform_unary_operation(
         double result_budget = a.noise_budget().current_budget - noise_cost;
         result_budget = std::max(0.0, result_budget);
 
-        EncryptedInt result(result_ciphertext.value(), context_, result_budget);
+        // preserve the original initial budget for refresh capability
+        EncryptedInt result(result_ciphertext.value(), context_, a.noise_budget().initial_budget);
+        
+        // set the current budget to the calculated reduced value
+        result.set_current_budget(result_budget);
         
         return Result<EncryptedInt>(std::move(result));
         

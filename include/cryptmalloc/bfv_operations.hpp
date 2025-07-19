@@ -128,6 +128,14 @@ public:
      */
     uint32_t operation_count() const noexcept { return noise_budget_.operations_count; }
 
+    /**
+     * @brief set current noise budget (for internal use by BFVOperations)
+     */
+    void set_current_budget(double budget) { 
+        std::lock_guard<std::mutex> lock(mutex_);
+        noise_budget_.current_budget = std::max(0.0, budget); 
+    }
+
 private:
     Ciphertext ciphertext_;
     std::shared_ptr<BFVContext> context_;
