@@ -27,6 +27,7 @@ class EncryptedSize;
 class EncryptedAddress;
 class EncryptedPointer;
 class EnhancedEncryptedBool;
+class EncryptedBool; // From bfv_comparisons.hpp
 
 // ========== Custom Exception Hierarchy ==========
 
@@ -178,7 +179,7 @@ public:
     };
 
 private:
-    EncryptedBool impl_;
+    EncryptedInt impl_; // Use EncryptedInt instead of EncryptedBool to avoid circular dependency
     State known_state_;
     bool is_known_;
 
@@ -187,19 +188,32 @@ public:
      * @brief construct from plaintext boolean
      */
     EnhancedEncryptedBool(bool value, std::shared_ptr<BFVContext> context)
-        : impl_(value, context), known_state_(value ? State::TRUE : State::FALSE), is_known_(true) {}
+        : impl_(value ? 1 : 0, context), known_state_(value ? State::TRUE : State::FALSE), is_known_(true) {}
 
     /**
      * @brief construct unknown state
      */
     explicit EnhancedEncryptedBool(std::shared_ptr<BFVContext> context)
-        : impl_(false, context), known_state_(State::UNKNOWN), is_known_(false) {}
+        : impl_(0, context), known_state_(State::UNKNOWN), is_known_(false) {}
 
     /**
-     * @brief construct from existing EncryptedBool
+     * @brief construct from existing EncryptedInt (treating non-zero as true)
      */
-    explicit EnhancedEncryptedBool(const EncryptedBool& other)
+    explicit EnhancedEncryptedBool(const EncryptedInt& other)
         : impl_(other), known_state_(State::UNKNOWN), is_known_(false) {}
+    
+    /**
+     * @brief construct from EncryptedBool
+     */
+    explicit EnhancedEncryptedBool(const EncryptedBool& bool_val)
+        : impl_(0, bool_val.context()), known_state_(State::UNKNOWN), is_known_(false) {
+        auto decrypted = bool_val.decrypt();
+        if (decrypted.has_value()) {
+            impl_ = EncryptedInt(decrypted.value() ? 1 : 0, bool_val.context());
+            known_state_ = decrypted.value() ? State::TRUE : State::FALSE;
+            is_known_ = true;
+        }
+    }
 
     // logical operators with three-valued logic
     EnhancedEncryptedBool operator&&(const EnhancedEncryptedBool& other) const;
@@ -221,14 +235,18 @@ public:
     bool is_state_known() const noexcept { return is_known_; }
 
     /**
-     * @brief get underlying EncryptedBool
+     * @brief get underlying EncryptedInt
      */
-    const EncryptedBool& underlying() const noexcept { return impl_; }
+    const EncryptedInt& underlying() const noexcept { return impl_; }
 
     /**
-     * @brief decrypt to plaintext
+     * @brief decrypt to plaintext boolean
      */
-    Result<bool> decrypt() const { return impl_.decrypt(); }
+    Result<bool> decrypt() const { 
+        auto result = impl_.decrypt(); 
+        if (!result.has_value()) return Result<bool>(result.error());
+        return Result<bool>(result.value() != 0);
+    }
 
     /**
      * @brief convert to string representation
@@ -245,7 +263,7 @@ class EncryptedSize {
 private:
     EncryptedInt impl_;
     static constexpr int64_t MIN_SIZE = 0;
-    static constexpr int64_t MAX_SIZE = static_cast<int64_t>(SIZE_MAX >> 1); // avoid overflow
+    static constexpr int64_t MAX_SIZE = 32767; // Fit comfortably within BFV plaintext modulus
 
 public:
     /**
@@ -329,7 +347,7 @@ class EncryptedAddress {
 private:
     EncryptedInt impl_;
     static constexpr int64_t MIN_ADDRESS = 0;
-    static constexpr int64_t MAX_ADDRESS = INTPTR_MAX;
+    static constexpr int64_t MAX_ADDRESS = 32767; // Fit comfortably within BFV plaintext modulus
 
 public:
     /**

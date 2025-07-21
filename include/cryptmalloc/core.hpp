@@ -49,6 +49,9 @@ class Result {
     const T& value() const {
         return value_.value();
     }
+    T take() {
+        return std::move(value_.value());
+    }
     const std::string& error() const {
         return error_;
     }

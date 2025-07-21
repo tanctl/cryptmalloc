@@ -91,7 +91,10 @@ std::string EnhancedEncryptedBool::to_string() const {
 EncryptedSize::EncryptedSize(size_t size, std::shared_ptr<BFVContext> context) 
     : impl_(static_cast<int64_t>(size), context) {
     if (size > static_cast<size_t>(MAX_SIZE)) {
-        throw OverflowError("Size value too large: " + std::to_string(size));
+        throw OverflowError("Size value too large: " + std::to_string(size) + ", max allowed: " + std::to_string(MAX_SIZE));
+    }
+    if (static_cast<int64_t>(size) < MIN_SIZE) {
+        throw std::invalid_argument("Size cannot be negative");
     }
 }
 
@@ -308,7 +311,14 @@ Result<size_t> EncryptedSize::decrypt() const {
 }
 
 bool EncryptedSize::is_valid() const noexcept {
-    return impl_.is_valid();
+    try {
+        if (!impl_.is_valid()) return false;
+        auto decrypted = impl_.decrypt();
+        if (!decrypted.has_value()) return false;
+        return decrypted.value() >= MIN_SIZE && decrypted.value() <= MAX_SIZE;
+    } catch (...) {
+        return false;
+    }
 }
 
 Result<EncryptedAddress> EncryptedSize::to_address() const {
@@ -532,7 +542,14 @@ Result<uintptr_t> EncryptedAddress::decrypt() const {
 }
 
 bool EncryptedAddress::is_valid() const noexcept {
-    return impl_.is_valid();
+    try {
+        if (!impl_.is_valid()) return false;
+        auto decrypted = impl_.decrypt();
+        if (!decrypted.has_value()) return false;
+        return decrypted.value() >= MIN_ADDRESS && decrypted.value() <= MAX_ADDRESS;
+    } catch (...) {
+        return false;
+    }
 }
 
 Result<void*> EncryptedAddress::to_pointer() const {

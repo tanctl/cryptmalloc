@@ -6,6 +6,8 @@ add_executable(test_main
     test_bfv_comparisons.cpp
     test_encrypted_types.cpp
     test_serialization_enhanced.cpp
+    test_memory_pool.cpp
+    test_encrypted_block.cpp
 )
 
 target_link_libraries(test_main PRIVATE
