@@ -20,7 +20,6 @@ EncryptedInt::EncryptedInt(std::shared_ptr<BFVContext> context, int64_t value)
         throw std::invalid_argument("context not ready for encryption");
     }
 
-    // check for overflow
     auto params = context_->get_parameters();
     int64_t max_safe = static_cast<int64_t>(params.plaintext_modulus / 2) - 1;
     int64_t min_safe = -max_safe;
@@ -30,7 +29,6 @@ EncryptedInt::EncryptedInt(std::shared_ptr<BFVContext> context, int64_t value)
             OverflowBehavior::THROW_EXCEPTION) {
             throw OverflowException("value exceeds safe range for encryption");
         }
-        // apply overflow behavior
         switch (ArithmeticConfig::instance().get_overflow_behavior()) {
             case OverflowBehavior::WRAP_AROUND:
                 value = ((value % params.plaintext_modulus) + params.plaintext_modulus) %
@@ -157,7 +155,6 @@ EncryptedInt EncryptedInt::operator*(const EncryptedInt& other) const {
 
     EncryptedInt result(context_, operation());
 
-    // update cached value
     if (cached_value_ && other.cached_value_) {
         try {
             result.cached_value_ = *cached_value_ * *other.cached_value_;
@@ -178,7 +175,6 @@ EncryptedInt EncryptedInt::operator-() const {
         throw std::invalid_argument("invalid context");
     }
 
-    // negate by multiplying with -1
     return *this * (-1);
 }
 
@@ -207,7 +203,6 @@ EncryptedInt EncryptedInt::operator+(int64_t value) const {
 
     EncryptedInt result(context_, result_ct);
 
-    // update cached value
     if (cached_value_) {
         try {
             result.cached_value_ = *cached_value_ + value;

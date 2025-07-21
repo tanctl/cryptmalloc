@@ -208,7 +208,6 @@ void BFVContext::generate_rotation_keys(const std::vector<int32_t>& indices) {
     }
 
     if (indices.empty()) {
-        // generate common rotation keys for memory management
         std::vector<int32_t> default_indices;
         uint32_t slots = params_.polynomial_degree / 2;
         for (uint32_t i = 1; i <= std::min(params_.rotation_indices, slots); i *= 2) {
@@ -224,7 +223,6 @@ void BFVContext::generate_rotation_keys(const std::vector<int32_t>& indices) {
 void BFVContext::clear_keys() {
     std::lock_guard<std::mutex> lock(context_mutex_);
 
-    // secure cleanup of key material
     if (key_pair_.publicKey) {
         key_pair_.publicKey.reset();
     }

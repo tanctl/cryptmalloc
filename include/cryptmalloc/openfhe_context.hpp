@@ -12,7 +12,6 @@ class OpenFHEContext {
 
     ~OpenFHEContext() = default;
 
-    // non-copyable but movable
     OpenFHEContext(const OpenFHEContext&) = delete;
     OpenFHEContext& operator=(const OpenFHEContext&) = delete;
     OpenFHEContext(OpenFHEContext&&) = default;

@@ -28,6 +28,7 @@ set(CRYPTMALLOC_SOURCES
     src/openfhe_context.cpp
     src/bfv_context.cpp
     src/bfv_operations.cpp
+    src/bfv_comparisons.cpp
 )
 
 # main library

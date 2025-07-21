@@ -89,12 +89,10 @@ TEST_CASE("bfv context initialization", "[bfv][context]") {
         BFVContext context1(params);
         REQUIRE(context1.is_initialized());
 
-        // move construction
         BFVContext context2(std::move(context1));
         REQUIRE(context2.is_initialized());
         REQUIRE_FALSE(context1.is_initialized());
 
-        // move assignment
         BFVContext context3(params);
         context3 = std::move(context2);
         REQUIRE(context3.is_initialized());
@@ -124,10 +122,8 @@ TEST_CASE("bfv key generation", "[bfv][keys]") {
     SECTION("rotation keys") {
         context.generate_keys();
 
-        // default rotation keys
         REQUIRE_NOTHROW(context.generate_rotation_keys());
 
-        // custom rotation keys
         std::vector<int32_t> indices = {1, -1, 2, -2, 4, -4};
         REQUIRE_NOTHROW(context.generate_rotation_keys(indices));
     }
@@ -220,7 +216,6 @@ TEST_CASE("bfv homomorphic operations", "[bfv][homomorphic]") {
         auto ct_b = context.encrypt(b);
         auto ct_c = context.encrypt(c);
 
-        // (a + b) * c
         auto ct_sum = context.add(ct_a, ct_b);
         auto ct_result = context.multiply(ct_sum, ct_c);
 
@@ -241,7 +236,6 @@ TEST_CASE("bfv homomorphic operations", "[bfv][homomorphic]") {
         auto rotated = rotation_context.rotate(ciphertext, 1);
         auto decrypted = rotation_context.decrypt_batch(rotated);
 
-        // check that rotation occurred
         REQUIRE(decrypted[0] == values[1]);  // rotated left by 1
     }
 }
