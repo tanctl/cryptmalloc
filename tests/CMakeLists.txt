@@ -6,6 +6,7 @@ add_executable(cryptmalloc_tests
     test_bfv_thread_safety.cpp
     test_bfv_operations.cpp
     test_bfv_comparisons.cpp
+    test_encrypted_types.cpp
 )
 
 target_link_libraries(cryptmalloc_tests
@@ -20,6 +21,7 @@ add_executable(cryptmalloc_benchmarks
     benchmark_bfv_context.cpp
     benchmark_bfv_operations.cpp
     benchmark_bfv_comparisons.cpp
+    benchmark_encrypted_types.cpp
 )
 
 target_link_libraries(cryptmalloc_benchmarks

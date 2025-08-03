@@ -29,6 +29,7 @@ set(CRYPTMALLOC_SOURCES
     src/bfv_context.cpp
     src/bfv_operations.cpp
     src/bfv_comparisons.cpp
+    src/encrypted_types.cpp
 )
 
 # main library
