@@ -84,6 +84,11 @@ impl Keys {
         }
         table
     }
+
+    pub fn server_key(&self) -> ServerKey {
+        set_server_key(self.server_key.clone());
+        self.server_key.clone()
+    }
 }
 
 impl Default for Keys {
