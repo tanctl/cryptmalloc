@@ -153,4 +153,17 @@ impl SlabClass {
             is_some: selected_mask,
         }
     }
+
+    /// frees a pointer by equality only; the entire slab scans once, compares each encrypted offset, and writes `enc_false` into matching bitmap cells with no early exit.
+    pub fn free(&mut self, ptr: &EncryptedPtr) {
+        set_server_key(self.server_key.clone());
+
+        for i in 0..self.num_blocks {
+            let candidate = &self.base_offset + &self.enc_offsets_u64[i];
+            let is_match = candidate.eq(&ptr.0);
+            let current = self.bitmap[i].clone();
+            let updated = is_match.if_then_else(&self.enc_false, &current);
+            self.bitmap[i] = updated;
+        }
+    }
 }
