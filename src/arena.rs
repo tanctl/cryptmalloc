@@ -1,21 +1,92 @@
-use crate::slab::SlabClass;
+//! Arena is the encrypted bump allocator backing large (>256 byte) requests; it advances a ciphertext cursor between encrypted `start` and `end` bounds, never frees individual chunks, and only resets wholesale.
 
-#[derive(Debug, Default)]
+use crate::{encrypted_option::EncryptedOption, encrypted_ptr::EncryptedPtr};
+use std::ops::Not;
+use tfhe::{prelude::*, set_server_key, FheBool, FheUint64, ServerKey};
+
+#[derive(Clone)]
 pub struct Arena {
-    slabs: Vec<SlabClass>,
+    start: FheUint64,
+    end: FheUint64,
+    cursor: FheUint64,
+    server_key: ServerKey,
+    enc_false: FheBool,
+    enc_zero_u64: FheUint64,
+    enc_min_alloc_u64: FheUint64,
+}
+
+impl core::fmt::Debug for Arena {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Arena")
+            .field("start", &"<ciphertext>")
+            .field("end", &"<ciphertext>")
+            .field("cursor", &"<ciphertext>")
+            .finish()
+    }
 }
 
 impl Arena {
-    pub fn new() -> Self {
-        Self { slabs: Vec::new() }
+    pub fn new(
+        start: FheUint64,
+        end: FheUint64,
+        server_key: ServerKey,
+        enc_false: FheBool,
+        enc_zero_u64: FheUint64,
+        enc_min_alloc_u64: FheUint64,
+    ) -> Self {
+        set_server_key(server_key.clone());
+        Self {
+            start: start.clone(),
+            end,
+            cursor: start,
+            server_key,
+            enc_false,
+            enc_zero_u64,
+            enc_min_alloc_u64,
+        }
     }
 
-    pub fn register_class(&mut self, class: SlabClass) {
-        // order is significant for oblivious traversals so preserve insertion sequencing
-        self.slabs.push(class);
+    pub fn allocate(&mut self, size: FheUint64) -> EncryptedOption<EncryptedPtr> {
+        set_server_key(self.server_key.clone());
+
+        let is_zero = size.eq(&self.enc_zero_u64);
+        let coerced_size = is_zero.if_then_else(&self.enc_min_alloc_u64, &size);
+        let new_cursor = &self.cursor + &coerced_size;
+        let has_space = new_cursor.le(&self.end);
+        let wrapped = new_cursor.lt(&self.cursor);
+        let ok = (&has_space) & (&wrapped.not());
+
+        let ptr_val = ok.if_then_else(&self.cursor, &self.enc_zero_u64);
+        self.cursor = ok.if_then_else(&new_cursor, &self.cursor);
+
+        EncryptedOption {
+            value: EncryptedPtr::new(ptr_val),
+            is_some: ok,
+        }
     }
 
-    pub fn classes(&self) -> &[SlabClass] {
-        &self.slabs
+    pub fn reset(&mut self) {
+        set_server_key(self.server_key.clone());
+        self.cursor = self.start.clone();
+    }
+
+    pub fn start(&self) -> &FheUint64 {
+        set_server_key(self.server_key.clone());
+        &self.start
+    }
+
+    pub fn end(&self) -> &FheUint64 {
+        set_server_key(self.server_key.clone());
+        &self.end
+    }
+
+    pub fn cursor(&self) -> &FheUint64 {
+        set_server_key(self.server_key.clone());
+        &self.cursor
+    }
+
+    pub fn enc_false(&self) -> &FheBool {
+        set_server_key(self.server_key.clone());
+        &self.enc_false
     }
 }

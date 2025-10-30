@@ -154,7 +154,7 @@ impl SlabClass {
         }
     }
 
-    /// frees a pointer by equality only; the entire slab scans once, compares each encrypted offset, and writes `enc_false` into matching bitmap cells with no early exit.
+    /// frees a pointer by equality only; the entire slab scans once, compares each encrypted offset, and writes `enc_false` into matching bitmap cells with no early exit, so ciphertexts that never belonged to this tier simply leave the bitmap unchanged.
     pub fn free(&mut self, ptr: &EncryptedPtr) {
         set_server_key(self.server_key.clone());
 
