@@ -103,6 +103,7 @@ fn install_global_server_key(server_key: &ServerKey) {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn refresh_global_server_key() {
     if let Ok(slot) = GLOBAL_SERVER_KEY.read() {
         if let Some(server_key) = slot.as_ref() {
