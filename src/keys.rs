@@ -110,3 +110,12 @@ pub(crate) fn refresh_global_server_key() {
         }
     }
 }
+
+pub(crate) fn clone_global_server_key() -> Option<ServerKey> {
+    if let Ok(slot) = GLOBAL_SERVER_KEY.read() {
+        if let Some(server_key) = slot.as_ref() {
+            return Some(server_key.clone());
+        }
+    }
+    None
+}

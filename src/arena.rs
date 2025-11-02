@@ -12,7 +12,6 @@ pub struct Arena {
     server_key: ServerKey,
     enc_false: FheBool,
     enc_zero_u64: FheUint64,
-    enc_min_alloc_u64: FheUint64,
 }
 
 impl core::fmt::Debug for Arena {
@@ -32,7 +31,6 @@ impl Arena {
         server_key: ServerKey,
         enc_false: FheBool,
         enc_zero_u64: FheUint64,
-        enc_min_alloc_u64: FheUint64,
     ) -> Self {
         set_server_key(server_key.clone());
         Self {
@@ -42,16 +40,13 @@ impl Arena {
             server_key,
             enc_false,
             enc_zero_u64,
-            enc_min_alloc_u64,
         }
     }
 
     pub fn allocate(&mut self, size: FheUint64) -> EncryptedOption<EncryptedPtr> {
         set_server_key(self.server_key.clone());
 
-        let is_zero = size.eq(&self.enc_zero_u64);
-        let coerced_size = is_zero.if_then_else(&self.enc_min_alloc_u64, &size);
-        let new_cursor = &self.cursor + &coerced_size;
+        let new_cursor = &self.cursor + &size;
         let has_space = new_cursor.le(&self.end);
         let wrapped = new_cursor.lt(&self.cursor);
         let ok = (&has_space) & (&wrapped.not());
